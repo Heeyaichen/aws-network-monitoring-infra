@@ -91,7 +91,7 @@ nano ~/.aws/config
 
 # Add your configuration
 [default]
-region = ap-south-1
+region = <your-aws-region>
 output = json
 ```
 #### Option B: AWS CLI Configure
@@ -105,11 +105,11 @@ aws configure
 # Windows
 set AWS_ACCESS_KEY_ID=your_access_key
 set AWS_SECRET_ACCESS_KEY=your_secret_key
-set AWS_REGION=ap-south-1
+set AWS_REGION=<your-aws-region>
 # macOS/Linux
 export AWS_ACCESS_KEY_ID=your_access_key
 export AWS_SECRET_ACCESS_KEY=your_secret_key
-export AWS_REGION=ap-south-1
+export AWS_REGION=<your-aws-region>
 ```
 #### Option D: AWS IAM Roles
 - For production environments, consider using AWS IAM Roles with AssumeRole.
