@@ -1,59 +1,349 @@
-### First Configure with AWS Credentials to use Terraform and AWS CLI
---- STEPS: 
+# AWS Multi-VPC Network Infrastructure with Terraform
 
-1. Create the S3 Bucket for State Storage
-First, you need to create an S3 bucket to store your Terraform state files:
+This project provides an automated solution for deploying a secure multi-VPC network infrastructure on AWS using Terraform. It creates two interconnected VPCs with public and private subnets, VPC peering, flow logging, and EC2 instances, enabling secure and monitored communication between isolated network environments.
+
+## Architecture Overview
+
+![AWS Network Architecture](./docs/architecture.png)
+
+This infrastructure implements AWS networking best practices including:
+- Isolated network segments with public and private subnets
+- Secure VPC peering for inter-VPC communication
+- Comprehensive network monitoring with VPC Flow Logs to CloudWatch
+- Granular access control with security groups and NACLs
+- Automated state management with S3 and DynamoDB backend
+
+## Module Structure
+
+The project is organized into the following modules:
+
+- **Root Module**: Orchestrates the entire infrastructure deployment
+- **[VPC Module](./vpc/README.md)**: Creates VPC, subnets, security groups, and NACLs
+- **[EC2 Module](./ec2/README.md)**: Deploys EC2 instances in public and private subnets
+
+## Features
+
+### Network Infrastructure
+- Two fully configured VPCs with public and private subnets
+- VPC peering connection for inter-VPC communication
+- Internet gateways for public internet access
+- Security groups with least-privilege access controls
+- Network ACLs for subnet-level security
+
+### Monitoring and Logging
+- CloudWatch Log Group for VPC Flow Logs
+- Customizable log retention periods
+- Traffic monitoring for security and compliance
+
+### Compute Resources
+- EC2 instances in both public and private subnets for each VPC
+- Enhanced security with IMDSv2 enforcement
+- Elastic IPs for public instances
+
+### Security
+- IAM roles and policies with least privilege
+- Security groups with specific ingress/egress rules
+- Network ACLs for additional network security
+- VPC Flow Logs for network traffic monitoring
+
+## Prerequisites
+
+- AWS CLI installed and configured with appropriate credentials
+- Terraform >= 1.0.0
+- AWS account with appropriate permissions
+- Key pair created in AWS for EC2 instance access
+
+## Quick Start
+### 1. Authenticate Terraform with AWS
+- Choose one of the following authentication methods:
+
+#### Option A: AWS Shared Configuration Files
+#### AWS CLI uses two main files:
+- `~/.aws/config` - Contains configuration settings like region, output format
+- `~/.aws/credentials` - Contains your access keys
+
 ```bash
-aws s3api create-bucket \
-  --bucket my-terraform-state-bucket \
-  --region ap-south-1 \
-  --create-bucket-configuration LocationConstraint=ap-south-1
+# Create the .aws directory (if it doesn't exist)
+# Windows
+mkdir %USERPROFILE%\.aws
+
+# macOS/Linux
+mkdir -p ~/.aws
+
+# Create/edit the credentials file
+# Windows
+notepad %USERPROFILE%\.aws\credentials
+
+# macOS/Linux
+nano ~/.aws/credentials
+
+# Add your credentials
+[default]
+aws_access_key_id = YOUR_ACCESS_KEY_ID
+aws_secret_access_key = YOUR_SECRET_ACCESS_KEY
+
+# Create/edit the config file
+# Windows
+notepad %USERPROFILE%\.aws\config
+
+# macOS/Linux
+nano ~/.aws/config
+
+# Add your configuration
+[default]
+region = ap-south-1
+output = json
 ```
-Enable versioning on the bucket:
+#### Option B: AWS CLI Configure
 ```bash
-aws s3api put-bucket-versioning \
-  --bucket my-terraform-state-bucket \
-  --versioning-configuration Status=Enabled
+aws configure
+# Then enter your access key, secret key, region, and output format when prompted
 ```
-Enable server-side encryption:
+
+#### Option C: Environment Variables
 ```bash
-aws s3api put-bucket-encryption \
-  --bucket my-terraform-state-bucket \
-  --server-side-encryption-configuration '{
-    "Rules": [
-      {
-        "ApplyServerSideEncryptionByDefault": {
-          "SSEAlgorithm": "AES256"
-        }
-      }
-    ]
-  }'
+# Windows
+set AWS_ACCESS_KEY_ID=your_access_key
+set AWS_SECRET_ACCESS_KEY=your_secret_key
+set AWS_REGION=ap-south-1
+# macOS/Linux
+export AWS_ACCESS_KEY_ID=your_access_key
+export AWS_SECRET_ACCESS_KEY=your_secret_key
+export AWS_REGION=ap-south-1
 ```
-2. Create the DynamoDB Table for State Locking
-Next, create a DynamoDB table for state locking:
+#### Option D: AWS IAM Roles
+- For production environments, consider using AWS IAM Roles with AssumeRole.
+
+#### Option E: AWS SSO Integration 
+- For enterprise environments, consider integrating with AWS SSO.
+
+Learn more about authentication methods in the [Terraform AWS Provider Documentation.](https://registry.terraform.io/providers/hashicorp/aws/latest/docs#authentication-and-configuration)
+
+
+### 2. Set Up the Terraform Backend
+
+First, set up the S3 bucket and DynamoDB table for Terraform state management:
+
 ```bash
-aws dynamodb create-table \
-  --table-name terraform-state-lock \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST \
-  --region ap-south-1
+# Make the script executable
+chmod +x setup_terraform_backend.sh
+
+# Run the script
+./setup-remote-state.sh
 ```
+This script creates:
+- An S3 bucket for state storage with versioning and encryption
+and DynamoDB table for state locking
+- Remote state storage ensures team collaboration
 
-or run the bash script: ./setup-remote-state.sh
-
-If You Already Have Local State Files
-If you've already been using Terraform with a local state file, use:
-terraform init -migrate-state
-
-This will:
-Initialize your configuration
-Detect the new S3 backend
-Prompt you to confirm migrating your existing local state to the S3 bucket
-Copy your local state file to the S3 bucket and configure Terraform to use it
-
-If This is a New Project (No Existing State)
-If you haven't applied any Terraform configurations yet and don't have local state, use:
+### 3. Initialize Terraform
+```bash
+# For a new project (no existing state)
 terraform init
-This will initialize Terraform to use your S3 backend for future operations without attempting to migrate any state.
 
+# For existing project with local state files
+terraform init -migrate-state
+```
+
+### 4. Deploy the Infrastructure
+```bash
+# Preview the changes
+terraform plan
+
+# Apply the configuration
+terraform apply -auto-approve
+```
+
+## Detailed Component Documentation
+
+### VPC Peering
+
+The infrastructure establishes a VPC peering connection between VPC-1 and VPC-2, allowing direct communication between resources in both VPCs:
+
+```hcl
+resource "aws_vpc_peering_connection" "vpc_peering" {
+  vpc_id      = module.vpc_1.vpc_id
+  peer_vpc_id = module.vpc_2.vpc_id
+  auto_accept = false
+  
+  tags = {
+    Name        = "Peering-${var.vpc_configs.vpc1.name}-to-${var.vpc_configs.vpc2.name}"
+    Side        = "Requester"
+    Environment = var.environment
+  }
+}
+```
+
+Routes are automatically configured in all route tables to enable traffic flow between the VPCs.
+
+### VPC Flow Logs
+
+VPC Flow Logs are configured to capture network traffic for VPC-1:
+
+```hcl
+resource "aws_flow_log" "vpc1_flow_log" {
+  log_destination          = aws_cloudwatch_log_group.vpc_flow_logs_group.arn
+  log_destination_type     = "cloud-watch-logs"
+  traffic_type             = var.flow_logs_config.traffic_type
+  vpc_id                   = module.vpc_1.vpc_id
+  iam_role_arn             = aws_iam_role.vpc_flow_logs_role.arn
+  max_aggregation_interval = var.flow_logs_config.aggregation_interval
+  
+  tags = {
+    Name        = "${var.vpc_configs.vpc1.name}-FlowLog"
+    Environment = var.environment
+  }
+}
+```
+
+The logs are stored in CloudWatch and can be used for security analysis, troubleshooting, and compliance.
+
+## Module Details
+
+### VPC Module
+
+The [VPC module](./vpc/README.md) creates a complete VPC infrastructure including:
+
+- VPC with custom CIDR block
+- Public and private subnets
+- Internet Gateway
+- Route tables
+- Security groups
+- Network ACLs
+
+For detailed documentation, see the [VPC Module README](./vpc/README.md).
+
+### EC2 Module
+
+The [EC2 module](./ec2/README.md) deploys EC2 instances in both public and private subnets:
+
+- Public instance with Elastic IP
+- Private instance without public internet access
+- Security group associations
+- IMDSv2 configuration for enhanced security
+
+For detailed documentation, see the [EC2 Module README](./ec2/README.md).
+
+## Network Data Flow
+The infrastructure enables secure communication between two VPCs through VPC peering, with traffic flowing through public and private subnets. VPC Flow Logs capture all network traffic for monitoring and analysis.
+
+```ascii
+                    VPC Peering
+    VPC-1 <-------------------------> VPC-2
+     |                                 |
+     |                                 |
+  Internet                         Internet
+  Gateway                          Gateway
+     |                                 |
+     v                                 v
+Public Subnet <---> Private Subnet  Public Subnet <---> Private Subnet
+     |                |                |                |
+     v                v                v                v
+  EC2 Instance    EC2 Instance     EC2 Instance     EC2 Instance
+```
+
+Key Component Interactions:
+1. Internet traffic flows through Internet Gateways to public subnets
+2. Private subnets can communicate with public subnets in the same VPC
+3. VPC peering enables direct communication between VPCs
+4. Security groups control instance-level access
+5. NACLs provide subnet-level security
+6. VPC Flow Logs capture all network traffic
+7. CloudWatch stores and manages flow logs
+
+## Customization
+
+### Adding More VPCs
+
+To add more VPCs, extend the `vpc_configs` variable in your `terraform.tfvars` file:
+
+```hcl
+vpc_configs = {
+  vpc1 = { ... },
+  vpc2 = { ... },
+  vpc3 = {
+    name                    = "VPC-3"
+    cidr_block              = "10.3.0.0/16"
+    public_subnet_cidr      = "10.3.0.0/24"
+    private_subnet_cidr     = "10.3.1.0/24"
+    availability_zone       = "ap-south-1a"
+    create_internet_gateway = true
+  }
+}
+```
+
+Then update the main.tf file to create the new VPC and establish peering connections.
+
+### Enabling Flow Logs for Additional VPCs
+
+To enable flow logs for VPC-2 or additional VPCs, add a new flow log resource:
+
+```hcl
+resource "aws_flow_log" "vpc2_flow_log" {
+  log_destination          = aws_cloudwatch_log_group.vpc_flow_logs_group.arn
+  log_destination_type     = "cloud-watch-logs"
+  traffic_type             = var.flow_logs_config.traffic_type
+  vpc_id                   = module.vpc_2.vpc_id
+  iam_role_arn             = aws_iam_role.vpc_flow_logs_role.arn
+  max_aggregation_interval = var.flow_logs_config.aggregation_interval
+  
+  tags = {
+    Name        = "${var.vpc_configs.vpc2.name}-FlowLog"
+    Environment = var.environment
+  }
+}
+```
+
+## Troubleshooting
+
+### VPC Peering Issues
+
+- **Error**: "VPC Peering Connection not in 'active' state"
+  ```bash
+  # Verify peering connection status
+  aws ec2 describe-vpc-peering-connections --region ap-south-1
+  ```
+  **Solution**: Ensure both VPCs exist and auto-accept is enabled
+
+### Flow Logs Issues
+
+- **Error**: "InvalidParameterException: The specified log group does not exist"
+  ```bash
+  # Verify log group exists
+  aws logs describe-log-groups --region ap-south-1
+  ```
+  **Solution**: Ensure IAM roles and policies are correctly configured
+
+### EC2 Connection Issues
+
+- **Error**: Unable to SSH into private instances
+- **Solution**: Ensure you're connecting through the public instance as a bastion host
+
+## Security Considerations
+
+1. **Least Privilege**: The IAM roles and policies follow the principle of least privilege
+2. **Network Isolation**: Private subnets are not directly accessible from the internet
+3. **Traffic Monitoring**: VPC Flow Logs capture all network traffic for security analysis
+4. **IMDSv2 Enforcement**: EC2 instances require token-based metadata access
+5. **Security Groups**: Inbound and outbound traffic is restricted based on specific rules
+
+## Contributing
+Contributions to this project are welcome. Please follow these steps to contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature-name`)
+3. Commit your changes with clear, descriptive messages
+4. Ensure all Terraform configurations pass validation (`terraform validate`)
+5. Update documentation as needed
+6. Submit a Pull Request with a comprehensive description of changes
+
+For major changes or features, please open an issue first to discuss what you would like to change.
+
+
+## License
+
+MIT
+
+## Authors
+
+Heeyaichen Konsam
