@@ -6,7 +6,7 @@ module "ec2_instance_public" {
   name = "public-server"
 
   ami                         = "ami-002f6e91abff6eb96"
-  instance_type               = "t2.micro"
+  instance_type               = var.instance_type
   key_name                    = "key pair 1"
   subnet_id                   = var.public_subnet_id          // Gets value from VPC module's output
   vpc_security_group_ids      = var.public_security_group_ids // Gets value from VPC module's output
@@ -35,7 +35,7 @@ module "ec2_instance_private" {
   name = "private-server"
 
   ami                         = "ami-002f6e91abff6eb96"
-  instance_type               = "t2.micro"
+  instance_type               = var.instance_type
   key_name                    = "key pair 1"
   subnet_id                   = var.private_subnet_id          // Gets value from VPC module's output
   vpc_security_group_ids      = var.private_security_group_ids // Gets value from VPC module's output

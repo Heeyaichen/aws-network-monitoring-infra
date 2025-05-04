@@ -100,6 +100,16 @@ resource "aws_vpc_security_group_ingress_rule" "allow_http_ipv4" {
   description       = "Allow HTTP traffic from anywhere"
 }
 
+// Allow HTTPS traffic (Port 443) from anywhere
+# resource "aws_vpc_security_group_ingress_rule" "allow_https_ipv4" {
+#   security_group_id = aws_security_group.public_sg.id
+#   cidr_ipv4         = "0.0.0.0/0"
+#   from_port         = 443
+#   ip_protocol       = "tcp"
+#   to_port           = 443
+#   description       = "Allow HTTPS traffic from anywhere"
+# }
+
 // Ingress Rule for SSH (Port 22)
 resource "aws_vpc_security_group_ingress_rule" "allow_ssh_ipv4" {
   security_group_id = aws_security_group.public_sg.id

@@ -22,3 +22,9 @@ variable "vpc_name" {
   description = "Name of the VPC to prefix resources with"
   type        = string
 }
+
+variable "instance_type" {
+  description = "Type of EC2 instance to launch"
+  type        = string
+  default     = "t2.micro"
+}
