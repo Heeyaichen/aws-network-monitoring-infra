@@ -339,7 +339,6 @@ Contributions to this project are welcome. Please follow these steps to contribu
 
 For major changes or features, please open an issue first to discuss what you would like to change.
 
-
 ## License
 
 MIT
