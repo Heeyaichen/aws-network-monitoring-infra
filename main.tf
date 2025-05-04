@@ -99,7 +99,6 @@ resource "aws_flow_log" "vpc1_flow_log" {
   vpc_id                   = module.vpc_1.vpc_id
   iam_role_arn             = aws_iam_role.vpc_flow_logs_role.arn
   max_aggregation_interval = var.flow_logs_config.aggregation_interval
-  log_format               = "${aws_iam_role.vpc_flow_logs_role.arn} ${aws_iam_policy.vpc_flow_logs_policy.arn}"
   depends_on               = [aws_iam_role_policy_attachment.vpc_flow_logs_attachment]
 
   tags = {
