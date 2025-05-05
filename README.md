@@ -307,7 +307,9 @@ After deploying the infrastructure, we can verify that the VPC peering connectio
    ```bash
    ping <VPC-2's Public EC2 instance's Private IPv4 address>
    ```
-4. We should see successful ping replies, confirming that traffic is flowing between the VPCs through the peering connection. The instances are communicating via their private IP addresses across VPCs.
+   ![Image](https://github.com/user-attachments/assets/86e00cd1-de4b-47f5-a46d-5a8b6f6ff4e5)
+   
+5. We should see successful ping replies, confirming that traffic is flowing between the VPCs through the peering connection. The instances are communicating via their private IP addresses across VPCs.
 
 ### Analyze VPC Flow Logs
 To verify, review the VPC Flow Logs to monitor and analyze network traffic:
@@ -315,6 +317,9 @@ To verify, review the VPC Flow Logs to monitor and analyze network traffic:
 - Navigate to CloudWatch in the AWS Console
 - Go to Log groups > VPCFlowLogsGroup > Log Streams
 - Select the log stream for VPC-1
+  
+![Image](https://github.com/user-attachments/assets/6f410d26-27be-4f7d-bf21-a494869b6662)
+
 #### 2. Examine the log events:
 - We should see entries for the ping traffic we generated in the previous step
 - The logs will show source and destination IP addresses, ports, protocol (ICMP for ping), and whether the traffic was accepted or rejected
