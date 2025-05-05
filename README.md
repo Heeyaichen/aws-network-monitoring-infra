@@ -2,6 +2,8 @@
 
 This project provides an automated solution for deploying a secure multi-VPC network infrastructure on AWS using Terraform. It creates two interconnected VPCs with public and private subnets, VPC peering, flow logging, and EC2 instances, enabling secure and monitored communication between isolated network environments.
 
+
+
 ## Architecture Overview
 
 ![AWS Network Architecture](./docs/architecture.png)
@@ -293,6 +295,38 @@ resource "aws_flow_log" "vpc2_flow_log" {
   }
 }
 ```
+## Testing and Verification
+
+### Test VPC Peering Connection
+
+After deploying the infrastructure, we can verify that the VPC peering connection is working correctly:
+
+1. Connect to VPC-1's public EC2 instance ("public-server") using EC2 Instance Connect in the AWS Console
+2. Obtain the private IP address of VPC-2's public EC2 instance from the AWS Console or Terraform outputs
+3. Run the following command to test connectivity across the VPC peering connection:
+   ```bash
+   ping <VPC-2's Public EC2 instance's Private IPv4 address>
+   ```
+4. We should see successful ping replies, confirming that traffic is flowing between the VPCs through the peering connection. The instances are communicating via their private IP addresses across VPCs.
+
+### Analyze VPC Flow Logs
+To verify, review the VPC Flow Logs to monitor and analyze network traffic:
+#### 1. Access CloudWatch Logs:
+- Navigate to CloudWatch in the AWS Console
+- Go to Log groups > VPCFlowLogsGroup > Log Streams
+- Select the log stream for VPC-1
+#### 2. Examine the log events:
+- We should see entries for the ping traffic we generated in the previous step
+- The logs will show source and destination IP addresses, ports, protocol (ICMP for ping), and whether the traffic was accepted or rejected
+- Look for records with source and destination IPs matching the VPC CIDR blocks
+- Flow logs include: source/destination IPs, ports, protocol, packet counts, etc.
+#### 3. Analyze traffic patterns:
+- Identify the ICMP traffic (protocol 1) from the ping test
+- Verify the source IP (VPC-1 instance) and destination IP (VPC-2 instance)
+- Confirm that traffic was accepted by security groups and NACLs
+
+Flow log entries confirm that the traffic is flowing between the VPCs as expected through the peering connection.
+These logs are valuable for security analysis, troubleshooting network connectivity issues, and compliance reporting.
 
 ## Troubleshooting
 
@@ -317,7 +351,7 @@ resource "aws_flow_log" "vpc2_flow_log" {
 ### EC2 Connection Issues
 
 - **Error**: Unable to SSH into private instances
-- **Solution**: Ensure you're connecting through the public instance as a bastion host
+- **Solution**: Ensure we're connecting through the public instance as a bastion host
 
 ## Security Considerations
 
@@ -337,7 +371,7 @@ Contributions to this project are welcome. Please follow these steps to contribu
 5. Update documentation as needed
 6. Submit a Pull Request with a comprehensive description of changes
 
-For major changes or features, please open an issue first to discuss what you would like to change.
+For major changes or features, please open an issue first to discuss what we would like to change.
 
 ## License
 
