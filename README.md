@@ -6,7 +6,7 @@ This project provides an automated solution for deploying a secure multi-VPC net
 
 ## Architecture Overview
 
-![Image](https://github.com/user-attachments/assets/b0996fc7-ca37-4429-a9d2-3ddfada1ad44)
+![Image](https://github.com/user-attachments/assets/314a0797-2535-4c10-b6b6-a90bf83e0330)
 
 This infrastructure implements AWS networking best practices including:
 - Isolated network segments with public and private subnets
